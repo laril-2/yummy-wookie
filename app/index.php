@@ -2,7 +2,7 @@
 
 	require '../includes/config.php';
 	require '../includes/functions.php';
-		
+	
 	$uri = $_SERVER['REQUEST_URI'];
 	$uri = explode('?', $uri)[0];
 	$uri = explode('/', $uri);

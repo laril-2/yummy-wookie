@@ -40,6 +40,10 @@ function validateEntry(&$entry, &$keys)	{
 	return true;
 }
 
+function yesterday()	{
+	return time() - 24 * 3600;
+}
+
 function extractTempValues($q)	{
 	$values = array();
 	if ($q instanceof PDOStatement)	{
@@ -78,10 +82,12 @@ function public_log(&$response)	{
 }
 
 function public_get_alarms(&$response)	{
+	$since = isset($_GET['since']) ? intval($_GET['since']) : 0;
+
 	global $db;
 	getDB();
 	
-	$q = $db->query("SELECT A.* FROM sensor_value A JOIN alarm B ON (A.id = B.sensor_value_id) ORDER BY A.timestamp LIMIT " . MAX_RETURN_COUNT);
+	$q = $db->query("SELECT A.* FROM sensor_value A JOIN alarm B ON (A.id = B.sensor_value_id AND A.timestamp > $since) ORDER BY A.timestamp DESC, A.sensor_id ASC LIMIT " . MAX_RETURN_COUNT);
 	
 	$response['result'] = extractTempValues($q);
 	
@@ -129,6 +135,7 @@ function public_get_by_car(&$response)	{
 function public_get_by_sensor(&$response)	{
 
 	$sensor_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+	$since = isset($_GET['since']) ? intval($_GET['since']) : 0;
 	if ($sensor_id <= 0)	{
 		$response['message'] = 'invalid id';
 		return 200;
@@ -137,7 +144,7 @@ function public_get_by_sensor(&$response)	{
 	global $db;
 	getDB();
 	
-	$q = $db->prepare("SELECT * FROM sensor_value WHERE sensor_id = :sensor_id ORDER BY timestamp DESC LIMIT " . MAX_RETURN_COUNT);
+	$q = $db->prepare("SELECT * FROM sensor_value WHERE sensor_id = :sensor_id AND timestamp > $since ORDER BY timestamp DESC LIMIT " . MAX_RETURN_COUNT);
 	$q->execute(array(
 		':sensor_id' => $sensor_id
 	));
@@ -267,17 +274,78 @@ function public_add(&$response)	{
 	return 200;
 }
 
+function public_change_settings(&$response)	{
+	if ($_SERVER['REQUEST_METHOD'] != 'POST')	{
+		header('Location: /admin/index.php/settings');
+		exit();
+	}
+	
+	if (!isset($_POST['password']) || $_POST['password'] != 'gruppen8')	{	
+		header('Location: /admin/index.php/settings');
+		exit();
+	}
+	
+	$settings = json_decode(file_get_contents('../includes/settings.json'), true);
+	$changes = false;
+	
+	foreach ($settings as $key => &$value)	{
+		if (!empty($_POST[$key]))	{
+			if (is_float($value) && is_float($_POST[$key]))	{
+				$value = floatval($_POST[$key]);
+				$changes = true;
+			} elseif (intval($value) > 0 && intval($_POST[$key]) > 0)	{
+				$value = intval($_POST[$key]);				
+				$changes = true;
+			}
+		}
+	}
+	unset($value);
+	
+	if ($changes)	{
+		file_put_contents('../includes/tmp_settings.json', json_encode($settings, JSON_PRETTY_PRINT));
+		rename('../includes/tmp_settings.json', '../includes/settings.json');
+	}
+
+	header('Location: /admin/index.php/settings');
+	exit();
+}
+
 function public_echo(&$response)	{
+	
 	if ($_SERVER['REQUEST_METHOD'] != 'POST')	{
 		$response['message'] = 'method not supported';
 		return 200;
 	}
 
 	$body = file_get_contents('php://input');
-	
+		
 	$response['succeed'] = true;
 	$response['message'] = $body;
 	return 200;
+}
+
+function public_nuke_everything(&$response)	{
+	if ($_SERVER['REQUEST_METHOD'] != 'POST')	{
+		header('Location: /admin/index.php/settings');
+		exit();
+	}
+	
+	if (!isset($_POST['password']) || $_POST['password'] != 'gruppen8')	{	
+		header('Location: /admin/index.php/settings');
+		exit();
+	}
+	
+	global $db;
+	getDB();
+	
+	$db->beginTransaction();
+	$db->query("DELETE FROM alarm");
+	$db->query("DELETE FROM sensor_value");
+	$db->query("DELETE FROM sensor");
+	$db->commit();
+
+	header('Location: /admin/index.php/boom');
+	exit();
 }
 
 
