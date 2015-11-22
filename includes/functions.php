@@ -15,17 +15,29 @@ function getDB()	{
 	}
 }
 
-function validateValue($value, $type)	{
-	switch ($type)	{
-	case 'int_positive':
-		return intval($value) > 0 ? true : false;
-		break;
-	case 'float':
-		return is_float($value) ? true : false;
-		break;
-	default:
+function validateEntry(&$entry, &$keys)	{
+	if (!is_array($entry))
 		return false;
+		
+	foreach ($keys as $key => $type)	{
+		if (empty($entry[$key]))
+			return false;
+		
+		switch ($type)	{
+		case 'int_positive':
+			if (intval($entry[$key]) <= 0)
+				return false;
+			break;
+		case 'float':
+			if (!is_float($entry[$key]))
+				return false;
+			break;
+		default:
+			return false;
+		}
 	}
+	
+	return true;
 }
 
 function extractTempValues($q)	{
@@ -46,7 +58,7 @@ function extractTempValues($q)	{
 
 function public_info(&$response)	{
 	$response['succeed'] = true;
-	$response['message'] = 'info message';
+	$response['message'] = 'API endpoints';
 	$response['result'] = array(
 		'info' => 'this',
 		'add' => 'add sensor value (sensorId, temperature, timestamp)',
@@ -55,6 +67,13 @@ function public_info(&$response)	{
 		'get_by_car?id=x' => 'get values by car ID x',
 		'get_by_sensor?id=x' => 'get values by sensor ID x'
 	);
+	return 200;
+}
+
+function public_log(&$response)	{
+	$log = file_get_contents('/tmp/laril.log');
+	$response['succeed'] = true;
+	$response['message'] = $log;
 	return 200;
 }
 
@@ -141,6 +160,7 @@ function public_add(&$response)	{
 	
 	$auth = empty($headers['Authorization']) ? null : $headers['Authorization'];
 	$body = file_get_contents('php://input');
+	$errors = array();
 	
 	/*
 		TODO authentication
@@ -151,93 +171,112 @@ function public_add(&$response)	{
 		$response['message'] = 'invalid request body';
 		return 200;
 	}
-
+	
 	$required_keys = array(
 		'sensorId' => 'int_positive',
 		'temperature' => 'float',
 		'timestamp' => 'int_positive'
 	);
-	$all_keys_found = true;
-	$invalid_keys = array();
 	
-	foreach ($required_keys as $key => $type)	{
-		if (empty($body[$key]))	{
-			$invalid_keys[] = $key;
-			$all_keys_found = false;
+	$valid_entries = array();
+	foreach ($body as $entry)	{
+		if (!is_array($entry))	{
 			continue;
 		}
-		if (!validateValue($body[$key], $type))	{
-			$invalid_keys[] = $key;
-			$all_keys_found = false;
+		if (validateEntry($entry, $required_keys))	{
+			$valid_entries[] = $entry;
 		}
-	}
-	
-	if (!$all_keys_found)	{
-		$response['message'] = 'missing or invalid keys: ' . implode(', ', $invalid_keys);
-		return 200;
 	}
 
 	global $db;
 	getDB();
+	
+	if (empty($valid_entries))	{
+		$response['message'] = 'no valid entries';
+		return 200;
+	}
 
-	$q = $db->prepare("SELECT EXISTS(SELECT id FROM sensor WHERE id = :sensor_id)");
-	$q->execute(array(
-		':sensor_id' => $body['sensorId']
-	));
-	$exists = $q->fetchColumn();
-	
-	if (!$exists)	{
-		$q = $db->prepare("INSERT INTO sensor (id) VALUES (:sensor_id)");
-		$q->execute(array(
-			'sensor_id' => $body['sensorId']
-		));
+	// insert missing sensors	
+	$sensors = array();
+	foreach ($valid_entries as $entry)	{
+		$sensors[intval($entry['sensorId'])] = true;
 	}
 	
-	try {
-		$q = $db->prepare("INSERT INTO sensor_value (sensor_id, temperature, timestamp) VALUES (:sensor_id, :temperature, :timestamp)");
-		$q->execute(array(
-			':sensor_id' => $body['sensorId'],
-			':temperature' => $body['temperature'],
-			':timestamp' => $body['timestamp']
-		));
-		
-		$q = $db->query("SELECT LASTVAL()");
-		$inserted = $q->fetchColumn();
-	}
-	catch (PDOException $e)	{
-		$response['message'] = $e->getMessage();
-		return 200;
+	$q = $db->query("SELECT id FROM sensor WHERE id IN (" . implode(',', array_keys($sensors)) . ")");
+	while ($row = $q->fetch())	{
+		unset($sensors[intval($row['id'])]);
 	}
 	
-	try {
-		$q = $db->prepare("UPDATE sensor SET timestamp = :timestamp WHERE id = :sensor_id AND (timestamp IS NULL OR timestamp < :timestamp)");
-		$q->execute(array(
-			':timestamp' => $body['timestamp'],
-			':sensor_id' => $body['sensorId']
-		));
+	if (!empty($sensors))	{
+		$db->query("INSERT INTO sensor (id) VALUES (" . implode('), (', array_keys($sensors)) . ")");
 	}
-	catch (PDOException $e)	{
-		$response['message'] = $e->getMessage();
-		return 200;
-	}
-	
-	$temperature = floatval($body['temperature']);
-	if ($temperature < MIN_TEMPERATURE || $temperature > MAX_TEMPERATURE)	{
-		try {		
-			$q = $db->prepare("INSERT INTO alarm (sensor_value_id) VALUES (:sensor_value_id)");
+
+	$added_entries = array();
+	foreach ($valid_entries as $entry)	{
+		try {
+			$q = $db->prepare("INSERT INTO sensor_value (sensor_id, temperature, timestamp) VALUES (:sensor_id, :temperature, :timestamp)");
 			$q->execute(array(
-				':sensor_value_id' => $inserted
+				':sensor_id' => $entry['sensorId'],
+				':temperature' => $entry['temperature'],
+				':timestamp' => $entry['timestamp']
+			));
+	
+			$q = $db->query("SELECT LASTVAL()");
+			$inserted = $q->fetchColumn();
+		}
+		catch (PDOException $e)	{
+			$errors[] = $e->getMessage();
+			continue;
+		}
+		$added_entries[] = $entry;
+	
+		try {
+			$q = $db->prepare("UPDATE sensor SET timestamp = :timestamp WHERE id = :sensor_id AND (timestamp IS NULL OR timestamp < :timestamp)");
+			$q->execute(array(
+				':timestamp' => $entry['timestamp'],
+				':sensor_id' => $entry['sensorId']
 			));
 		}
 		catch (PDOException $e)	{
-			$response['message'] = $e->getMessage();
-			return 200;
+			$errors[] = $e->getMessage();
+			continue;
 		}
+		
+		$temperature = floatval($entry['temperature']);
+		if ($temperature < MIN_TEMPERATURE || $temperature > MAX_TEMPERATURE)	{
+			try {		
+				$q = $db->prepare("INSERT INTO alarm (sensor_value_id) VALUES (:sensor_value_id)");
+				$q->execute(array(
+					':sensor_value_id' => $inserted
+				));
+			}
+			catch (PDOException $e)	{
+				$errors[] = $e->getMessage();
+				continue;
+			}
+		}
+		
 	}
 
-	$response['succeed'] = true;
-	$response['message'] = 'entry saved';
+	$response['succeed'] = count($added_entries) > 0 ? true : false;
+	$response['message'] = count($added_entries) . (count($added_entries) > 1 ? ' entries saved' : ' entry saved');
+	$response['saved_entries'] = $added_entries;
+	if (!empty($errors))	{
+		$response['errors'] = $errors;
+	}
+	return 200;
+}
 
+function public_echo(&$response)	{
+	if ($_SERVER['REQUEST_METHOD'] != 'POST')	{
+		$response['message'] = 'method not supported';
+		return 200;
+	}
+
+	$body = file_get_contents('php://input');
+	
+	$response['succeed'] = true;
+	$response['message'] = $body;
 	return 200;
 }
 

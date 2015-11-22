@@ -5,7 +5,7 @@ $cmd = "/sbin/ifconfig";
 $output = array();
 exec($cmd, $output);
 
-$log = array(date('Y-m-d H:m:s'));
+$log = array(date('Y-m-d H:i:s'));
 
 $ethernet = false;
 foreach ($output as $row)	{
@@ -31,6 +31,7 @@ if (isset($ip))	{
 	$log[] = "last IP $last_ip";
 	if (trim($ip) !== trim($last_ip))	{
 		$log[] = "IP changed";
+
 		$curl = curl_init();
 		$auth_string = base64_encode("daslartsake:hv5.dp/f0");
 
@@ -55,6 +56,7 @@ if (isset($ip))	{
 			file_put_contents('last-ip', $new_ip);
 		}
 		$log[] = $result;
+
 	}
 	else {
 		$log[] = 'no request';
