@@ -5,7 +5,7 @@ $cmd = "/sbin/ifconfig";
 $output = array();
 exec($cmd, $output);
 
-$log = array(date('Y-m-d H:i:s'));
+$log = array(date('Y-m-d H:i:s') . ' client.php:');
 
 $ethernet = false;
 foreach ($output as $row)	{
