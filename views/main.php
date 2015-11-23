@@ -12,6 +12,7 @@
 </head>
 <body>
 <h1>MAIN VIEW</h1>
+<h3><a href="/admin/index.php/common">COMMON DB</a></h3>
 <h3><a href="/admin/index.php/alarms">ALL ALARMS</a></h3>
 <ul>
 <?php

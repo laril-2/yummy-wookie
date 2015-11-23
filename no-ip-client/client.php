@@ -27,7 +27,7 @@ unset($output);
 
 if (isset($ip))	{
 	$log[] = "current IP $ip";
-	$last_ip = file_get_contents('last-ip');
+	$last_ip = file_get_contents('/home/lartsake/no-ip-client/last-ip');	// full path for cron jobs
 	$log[] = "last IP $last_ip";
 	if (trim($ip) !== trim($last_ip))	{
 		$log[] = "IP changed";

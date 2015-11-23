@@ -11,6 +11,10 @@
 			<td><input type="text" name="MAX_RETURN_COUNT" value="<?= MAX_RETURN_COUNT ?>"/></td>
 		</tr>
 		<tr>
+			<td><span>MAX_TRANSACTION_COUNT</span></td>
+			<td><input type="text" name="MAX_TRANSACTION_COUNT" value="<?= MAX_TRANSACTION_COUNT ?>"/></td>
+		</tr>
+		<tr>
 			<td><span>MAX_TEMPERATURE</span></td>
 			<td><input type="text" name="MAX_TEMPERATURE" value="<?= MAX_TEMPERATURE ?>"/></td>
 		</tr>

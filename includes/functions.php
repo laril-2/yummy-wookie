@@ -287,7 +287,6 @@ function public_change_settings(&$response)	{
 	
 	$settings = json_decode(file_get_contents('../includes/settings.json'), true);
 	$changes = false;
-	
 	foreach ($settings as $key => &$value)	{
 		if (!empty($_POST[$key]))	{
 			if (is_float($value) && is_float($_POST[$key]))	{
@@ -340,6 +339,7 @@ function public_nuke_everything(&$response)	{
 	
 	$db->beginTransaction();
 	$db->query("DELETE FROM alarm");
+	$db->query("DELETE FROM common_value");
 	$db->query("DELETE FROM sensor_value");
 	$db->query("DELETE FROM sensor");
 	$db->commit();
