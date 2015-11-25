@@ -53,7 +53,7 @@ if (isset($ip))	{
 
 		list($message, $new_ip) = explode(' ', $result);
 		if ($message == 'good')	{
-			file_put_contents('last-ip', $new_ip);
+			file_put_contents('/home/lartsake/no-ip-client/last-ip', $new_ip);
 		}
 		$log[] = $result;
 
