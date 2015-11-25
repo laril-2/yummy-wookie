@@ -6,7 +6,9 @@
 		CURLOPT_CONNECTTIMEOUT => 2,
 		CURLOPT_TIMEOUT => 5,
 		CURLOPT_USERAGENT => 'gruppen8 update client',
-		CURLOPT_URL => 'http://daslartsake.ddns.net/app/index.php/add',
+		CURLOPT_URL => 'https://daslartsake.ddns.net/app/index.php/add',
+		CURLOPT_SSL_VERIFYPEER => false,
+		CURLOPT_SSL_VERIFYHOST => false,
 		CURLOPT_POST => 1,
 		CURLOPT_HTTPHEADER => array(
 			'User-Agent: DasLartsake Gruppen8 Update Client' 

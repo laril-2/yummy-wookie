@@ -26,13 +26,17 @@
 <?php
 
 	$curl = curl_init();
+	
+	$body = 'Timestamp=' . date('Y-m-d H:i:s', yesterday());
 
 	curl_setopt_array($curl, array(
 		CURLOPT_RETURNTRANSFER => 1,
 		CURLOPT_CONNECTTIMEOUT => 2,
 		CURLOPT_TIMEOUT => 10,
-		CURLOPT_USERAGENT => 'gruppen8 get client',
-		CURLOPT_URL => 'http://sulproj.esy.es/get.php',
+		CURLOPT_USERAGENT => 'gruppen8 post client',
+		CURLOPT_URL => 'http://sulproj.esy.es/getAfterTime.php',
+		CURLOPT_POST => 1,
+		CURLOPT_POSTFIELDS => $body,
 		CURLOPT_HTTPHEADER => array(
 			'User-Agent: DasLartsake Get Client Debian/v1.0'
 		)
@@ -44,7 +48,7 @@
 	$result = json_decode($result, true);
 	
 	if (!is_null($result))	{
-		$result = $result['Reply'];
+		$result = array_reverse($result['Reply']);
 		foreach ($result as $row)	{
 			$id = $row['SensorID'];
 			if (substr($id, 0, 2) != 'r8' || strpos($id, ':') === false)	{
