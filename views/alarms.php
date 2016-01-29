@@ -94,13 +94,13 @@
 	
 	function renewXHRRequest()	{
 		window.setTimeout(function() {
-			var jqxhr = $.ajax('http://daslartsake.ddns.net/app/index.php/get_alarms?since=' + last_fetched).done(handleXHRResponse).always(renewXHRRequest);
+			var jqxhr = $.ajax('https://daslartsake.ddns.net/app/index.php/get_alarms?since=' + last_fetched).done(handleXHRResponse).always(renewXHRRequest);
 		}, 30000);
 	}
 
 	$(document).ready(function() {
 		var timeout = window.setTimeout(function() {
-			var jqxhr = $.ajax('http://daslartsake.ddns.net/app/index.php/get_alarms?since=' + last_fetched).done(handleXHRResponse).always(renewXHRRequest);
+			var jqxhr = $.ajax('https://daslartsake.ddns.net/app/index.php/get_alarms?since=' + last_fetched).done(handleXHRResponse).always(renewXHRRequest);
 		}, 30000);
 	});
 </script>
