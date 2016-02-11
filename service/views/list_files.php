@@ -1,22 +1,43 @@
 <?php
 
 	$user_id = require_user_id();
+	include 'head.php';
 
 	getDB();
 
 	$q = $db->query("SELECT hash, name FROM file");
 
-	if (!empty($_COOKIE['username']))	{
-		echo '<h2>LOGGED IN AS ' . $_COOKIE['username'] . '</h2>';
-	}
-
 ?>
 
-<h1>FILES LIST</h1>
-<table>
-	<?php while ($row = $q->fetch(PDO::FETCH_ASSOC)): ?>
-	<tr>
-		<td><?= $row['name'] ?> <a href="<?= get_download_link($row['hash']) ?>">DOWNLOAD</a></td>
-	</tr>
-	<?php endwhile; ?>
-</table>
+<div class="pure-g">
+	<div class="pure-u-1-2">
+		<div style="padding: 1em">
+			<h1>FILES LIST</h1>
+			<a class="pure-button pure-button-primary" href="upload">UPLOAD FILES</a>
+		</div>
+	</div>
+	<div class="pure-u-1-2">
+		<div style="padding: 1em">
+			<table class="pure-table pure-table-horizontal">
+				<thead>
+					<tr>
+						<th>Filename</th>
+						<th>Download link</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php while ($row = $q->fetch(PDO::FETCH_ASSOC)): ?>
+					<tr>
+						<td><?= $row['name'] ?></td>
+						<td><a href="<?= get_download_link($row['hash']) ?>">DOWNLOAD</a></td>
+					</tr>
+					<?php endwhile; ?>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<?php
+	include 'tail.php';
+?>

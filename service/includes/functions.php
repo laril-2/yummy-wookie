@@ -2,7 +2,7 @@
 
 function getDB()	{
 	global $db;
-	
+
 	if (!isset($db))	{
 		try {
 			$db = new PDO('pgsql:host=localhost;dbname=' . DB_NAME . ';user=' . DB_USER . ';password=' . DB_PASSWORD);
@@ -15,8 +15,10 @@ function getDB()	{
 }
 
 function require_user_id()	{
+	$redirect = $_SERVER['REQUEST_URI'] == '/' ? 'Location: /index.php/login' : 'Location: login';
+
 	if (empty($_COOKIE['token']))	{
-		header('Location: login');
+		header($redirect);
 		exit;
 	}
 
@@ -30,7 +32,7 @@ function require_user_id()	{
 		return intval($id);
 	}
 
-	header('Location: login');
+	header($redirect);
 	exit;
 }
 
@@ -60,4 +62,58 @@ function download($hash)	{
 
 function get_download_link($hash)	{
 	return "/index.php/download?hash=$hash";
+}
+
+function logger($msg)	{
+	if (empty($msg))	{
+		return;
+	}
+
+	if (is_array($msg))	{
+		$msg = implode("\n", $msg);
+	}
+
+	file_put_contents('/tmp/laril.log', "$msg\n", FILE_APPEND);
+}
+
+function process_upload($data)	{
+	global $db;
+
+	$name = empty($data['name']) ? null : htmlspecialchars($data['name']);
+	$tmp_name = empty($data['tmp_name']) ? null : $data['tmp_name'];
+
+	if (is_null($data) || is_null($tmp_name) || !file_exists($tmp_name))	{
+		return 0;
+	}
+
+
+	$hash = md5_file($tmp_name);
+	getDB();
+
+	$stm = $db->prepare("SELECT EXISTS(SELECT hash FROM file WHERE hash = :hash)");
+	$stm->execute(array(
+		':hash' => $hash
+	));
+
+	$exists = $stm->fetchColumn();
+	logger(var_export($exists, true));
+	if ($exists === 'f' || $exists === false)	{
+		$dir = FILES_PATH . '/' . substr($hash, 0, 2);
+		if (!file_exists($dir))	{
+			mkdir($dir, 0755);
+		}
+
+		$temp = $dir . '/_' . $hash;
+		file_put_contents($temp, file_get_contents($tmp_name));
+		rename($temp, $dir . '/' . $hash);
+		unlink($tmp_name);
+
+		$stm = $db->prepare("INSERT INTO file (hash, name) VALUES (:hash, :name)");
+		$stm->execute(array(
+			':hash' => $hash,
+			':name' => $name
+		));
+	}
+
+	return $hash;
 }
