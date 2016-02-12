@@ -6,7 +6,7 @@
 
 	getDB();
 
-	$q = $db->query("SELECT hash, name FROM file");
+	$q = $db->query("SELECT * FROM file");
 
 ?>
 
@@ -24,6 +24,7 @@
 					<tr>
 						<th>Filename</th>
 						<th>Download link</th>
+						<th>Mimetype</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -31,6 +32,7 @@
 					<tr>
 						<td><?= $row['name'] ?></td>
 						<td><a href="<?= get_download_link($row['hash']) ?>">DOWNLOAD</a></td>
+						<td><?= $row['mimetype'] ?>/<?= $row['subtype'] ?></td>
 					</tr>
 					<?php endwhile; ?>
 				</tbody>

@@ -97,22 +97,25 @@ function process_upload($data)	{
 	));
 
 	$exists = $stm->fetchColumn();
-	logger(var_export($exists, true));
 	if ($exists === 'f' || $exists === false)	{
 		$dir = FILES_PATH . '/' . substr($hash, 0, 2);
 		if (!file_exists($dir))	{
 			mkdir($dir, 0755);
 		}
+		$mime = mime_content_type($tmp_name);
+		list($mimetype, $subtype) = explode('/', $mime);
 
 		$temp = $dir . '/_' . $hash;
 		file_put_contents($temp, file_get_contents($tmp_name));
 		rename($temp, $dir . '/' . $hash);
 		unlink($tmp_name);
 
-		$stm = $db->prepare("INSERT INTO file (hash, name) VALUES (:hash, :name)");
+		$stm = $db->prepare("INSERT INTO file (hash, name, mimetype, subtype) VALUES (:hash, :name, :mimetype, :subtype)");
 		$stm->execute(array(
 			':hash' => $hash,
-			':name' => $name
+			':name' => $name,
+			':mimetype' => $mimetype,
+			':subtype' => $subtype
 		));
 	}
 

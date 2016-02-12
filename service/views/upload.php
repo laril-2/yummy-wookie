@@ -26,7 +26,11 @@
 <form enctype="multipart/form-data" action="" method="POST">
 	<input type="hidden" name="MAX_FILE_SIZE" value="10000" />
 	<div class="pure-g">
-		<div class="pure-u-1-5"></div>
+		<div class="pure-u-1-5">
+			<div class="my-header">
+				<a href="list_files">BACK TO LIST VIEW</a>
+			</div>
+		</div>
 		<div class="pure-u-1-5">
 			<div class="my-header">
 				<span>Choose file to upload:</span>
