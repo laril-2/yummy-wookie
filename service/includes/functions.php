@@ -14,12 +14,14 @@ function getDB()	{
 	}
 }
 
-function require_user_id()	{
-	$redirect = $_SERVER['REQUEST_URI'] == '/' ? 'Location: /index.php/login' : 'Location: login';
+function redirect($url)	{
+	header('Location: ' . BASE_URL . "/$url");
+	exit;
+}
 
+function require_user_id()	{
 	if (empty($_COOKIE['token']))	{
-		header($redirect);
-		exit;
+		redirect('login');
 	}
 
 	global $db;
@@ -32,8 +34,7 @@ function require_user_id()	{
 		return intval($id);
 	}
 
-	header($redirect);
-	exit;
+	redirect('login');
 }
 
 function download($hash)	{
@@ -61,7 +62,7 @@ function download($hash)	{
 }
 
 function get_download_link($hash)	{
-	return "/index.php/download?hash=$hash";
+	return "/service/index.php/download?hash=$hash";
 }
 
 function logger($msg)	{

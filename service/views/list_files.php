@@ -1,6 +1,7 @@
 <?php
 
 	$user_id = require_user_id();
+	$title = 'My files';
 	include 'head.php';
 
 	getDB();
@@ -10,13 +11,13 @@
 ?>
 
 <div class="pure-g">
-	<div class="pure-u-1-2">
+	<div class="pure-u-1-4">
 		<div style="padding: 1em">
 			<h1>FILES LIST</h1>
 			<a class="pure-button pure-button-primary" href="upload">UPLOAD FILES</a>
 		</div>
 	</div>
-	<div class="pure-u-1-2">
+	<div class="pure-u-3-4">
 		<div style="padding: 1em">
 			<table class="pure-table pure-table-horizontal">
 				<thead>

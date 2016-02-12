@@ -1,7 +1,6 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] == 'POST')	{
 	$errors = array();
-	//setcookie('token', 'asdfakl', time() + 3600);
 	if (!empty($_POST['username']))	{
 		$username = $_POST['username'];
 	} else {
@@ -37,8 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')	{
 
 
 	if (empty($errors))	{
-		header('Location: list_files');
-		exit;
+		redirect('list_files');
 	} else {
 		echo '<ul style="color:red">';
 		foreach ($errors as $error)	{
@@ -50,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')	{
 ?>
 
 <h2>LOGIN</h2>
-<form method="post" action="/index.php/login">
+<form method="post" action="/service/index.php/login">
 	<table>
 		<tr>
 			<td><label>username <input type="text" name="username" /></label></td>

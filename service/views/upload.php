@@ -8,8 +8,7 @@
 				$hash = process_upload($_FILES['upload']);
 
 				if (!empty($hash))	{
-					header("Location: upload_status?hash=$hash");
-					exit;
+					redirect("upload_status?hash=$hash");
 				}
 				else {
 					echo '<h1>PROCESS UPLOAD FAILED</h1>';	// TODO
@@ -20,24 +19,31 @@
 		}
 	}
 
+	$title = "Upload files";
 	include 'head.php';
 ?>
 
-<div class="pure-g">
-	<div class="pure-u-1-2">
-		<div style="padding: 1em">
-			<h1>UPLOAD FILES</h1>
+<form enctype="multipart/form-data" action="" method="POST">
+	<input type="hidden" name="MAX_FILE_SIZE" value="10000" />
+	<div class="pure-g">
+		<div class="pure-u-1-5"></div>
+		<div class="pure-u-1-5">
+			<div class="my-header">
+				<span>Choose file to upload:</span>
+			</div>
 		</div>
-	</div>
-	<div class="pure-u-1-2">
-		<div style="padding: 1em">
-			<form enctype="multipart/form-data" action="" method="POST">
-				<input type="hidden" name="MAX_FILE_SIZE" value="10000" />
-				Choose file to upload: <input name="upload" type="file" /><br/>
+		<div class="pure-u-1-5">
+			<div class="my-header">
+				<input name="upload" type="file" />
+			</div>
+		</div>
+		<div class="pure-u-1-5">
+			<div class="my-header">
 				<input type="submit" value="UPLOAD FILE" />
-			</form>
+			</div>
 		</div>
+		<div class="pure-u-1-5"></div>
 	</div>
-</div>
+</form>
 
 <?php include 'tail.php'; ?>
