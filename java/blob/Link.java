@@ -4,18 +4,25 @@ public class Link {
 
 	private Mass a, b;
 
-	private double restLength, stiffness;
+	private double restLength, stiffness, damping, lastLength;
 
-	public Link(double rl, double k) {
+	private boolean contracted;
+
+	public Link(double restLength, double stiffness, double damping) {
 		a = null;
 		b = null;
+		lastLength = -1;
+		contracted = false;
 
-		restLength = rl;
-		stiffness = k;
-		if (restLength < 5)	// TODO magic number
-			restLength = 5;
-		if (stiffness < 0.01)	// TODO magic number
-			stiffness = 0.01;
+		this.restLength = restLength;
+		this.stiffness = stiffness;
+		this.damping = damping;
+		if (this.restLength < 5)	// TODO magic number
+			this.restLength = 5;
+		if (this.stiffness < 0.01)	// TODO magic number
+			this.stiffness = 0.01;
+		if (this.damping < 0)
+			this.damping = 0;
 	}
 
 	public boolean isComplete() {
@@ -49,6 +56,17 @@ public class Link {
 	public void detach() {
 		a = null;
 		b = null;
+		lastLength = -1;
+	}
+
+	public void setContracted(boolean contracted) {
+		this.contracted = contracted;
+	}
+
+	private double getRestLength() {
+		if (contracted)
+			return 0.8 * restLength; // TODO magic number
+		return restLength;
 	}
 
 	public void update() {
@@ -68,10 +86,18 @@ public class Link {
 		dx = dx / length;
 		dy = dy / length;
 
-		double deviation = length - restLength;
+		double deviation = length - getRestLength();
 		double coefficient = deviation * stiffness;
 
 		a.addForce(dx * coefficient, dy * coefficient);
 		b.addForce(-dx * coefficient, -dy * coefficient);
+
+		if (lastLength > 0) {
+			coefficient = (length - lastLength) * damping;
+
+			a.addForce(dx * coefficient, dy * coefficient);
+			b.addForce(-dx * coefficient, -dy * coefficient);
+		}
+		lastLength = length;
 	}
 }

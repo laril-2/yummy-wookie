@@ -25,8 +25,20 @@ import model.Link;
 public class Board extends JPanel implements ActionListener {
 
 	private final int DELAY = 20;
-	private final double TIMESTEP = 0.1;
-	private final double BLOB_STIFFNESS = 1.0;
+	private final int STEP_COUNT = 5; // 5
+	private final double TIMESTEP = 0.05; // 0.05
+
+	private final int BLOB_SEGMENT_COUNT = 20; // 20
+	private final double BLOB_RADIUS = 120.0; // 120.0
+	private final double BLOB_SKIN_THICKNESS = 40.0; // 40.0
+	private final double BLOB_DAMPING = 10.0; // 10.0
+	private final double BLOB_SKIN_STIFFNESS = 10.0; // 10.0
+	private final double BLOB_INNER_STIFFNESS = 5.0; // 5.0
+	private final double BLOB_CENTER_MASS = 20.0; // 20.0
+	private final double BLOB_OUTER_MASS = 3.0;	// 3.0
+	private final double THRUSTER_FORCE = 50.0;
+
+	private static final double GRAVITY = 0.6; // 0.6
 
 	private Timer timer;
 
@@ -47,40 +59,60 @@ public class Board extends JPanel implements ActionListener {
 		setFocusable(true);
 		setBackground(Color.BLACK);
 
-		masses = new ArrayList<Mass>();
-		links = new ArrayList<Link>();
-
-		addBlob(500, 350);
+		initWorld();
 
 		timer = new Timer(DELAY, this);
 		timer.start();
 	}
 
+	private void initWorld() {
+		masses = new ArrayList<Mass>();
+		links = new ArrayList<Link>();
+		centerMass = null;
+
+		addBlob(500, 598);
+	}
+
 	private void addBlob(double cx, double cy) {
-		centerMass = new Mass(cx, cy, 20);
+		centerMass = new Mass(cx, cy, BLOB_CENTER_MASS);
 		masses.add(centerMass);
 
-		double radius = 150;
-		double skinThickness = 20;
-		int segments = 20;
+		double radius = BLOB_RADIUS;
+		double skinThickness = BLOB_SKIN_THICKNESS;
+		int segments = BLOB_SEGMENT_COUNT;
 
 		double innerSegment = 2 * Math.PI * radius / segments;
 		double outerSegment = 2 * Math.PI * (radius + skinThickness) / segments;
+		double newSkinSegment = 2 * Math.PI * (radius - skinThickness / 2) / segments;
 		double obliqueLength = Math.sqrt(skinThickness * skinThickness + innerSegment * innerSegment);
+		double newObliqueLength = Math.sqrt(0.25 * skinThickness + newSkinSegment * newSkinSegment);
 		Mass[] inners = new Mass[segments];
 		Mass[] outers = new Mass[segments];
+		Mass[] news = new Mass[segments];
 		double angle = 2 * Math.PI / segments;
 
 		for (int i = 0; i < segments; i++) {
 			double x = cx + radius * Math.cos(angle * i);
 			double y = cy + radius * Math.sin(angle * i);
 
-			inners[i] = new Mass(x, y, 3.0);
+			inners[i] = new Mass(x, y, BLOB_OUTER_MASS);
 			masses.add(inners[i]);
 
-			Link l = new Link(radius, BLOB_STIFFNESS);
+			Link l = new Link(radius, BLOB_INNER_STIFFNESS, BLOB_DAMPING);
 			l.join(centerMass);
 			l.join(inners[i]);
+			links.add(l);
+		}
+		for (int i = 0; i < segments; i++) {
+			double x = cx + (radius - skinThickness / 2) * Math.cos(angle * i);
+			double y = cy + (radius - skinThickness / 2) * Math.sin(angle * i);
+
+			news[i] = new Mass(x, y, BLOB_OUTER_MASS);
+			masses.add(news[i]);
+
+			Link l = new Link(radius - skinThickness / 2, BLOB_INNER_STIFFNESS, BLOB_DAMPING);
+			l.join(centerMass);
+			l.join(news[i]);
 			links.add(l);
 		}
 		for (int i = 0; i < segments; i++) {
@@ -94,24 +126,39 @@ public class Board extends JPanel implements ActionListener {
 		for (int i = 0; i < segments; i++) {
 			int next = (i + 1) % segments;
 
-			Link l = new Link(innerSegment, BLOB_STIFFNESS);
+			Link l = new Link(innerSegment, BLOB_SKIN_STIFFNESS, BLOB_DAMPING);
 			l.join(inners[i]);
 			l.join(inners[next]);
 			links.add(l);
 
-			l = new Link(outerSegment, BLOB_STIFFNESS);
+			l = new Link(outerSegment, BLOB_SKIN_STIFFNESS, BLOB_DAMPING);
 			l.join(outers[i]);
 			l.join(outers[next]);
 			links.add(l);
 
-			l = new Link(skinThickness, BLOB_STIFFNESS);
+			l = new Link(skinThickness, BLOB_SKIN_STIFFNESS, BLOB_DAMPING);
 			l.join(inners[i]);
 			l.join(outers[i]);
 			links.add(l);
 
-			l = new Link(obliqueLength, BLOB_STIFFNESS);
+			l = new Link(obliqueLength, BLOB_SKIN_STIFFNESS, BLOB_DAMPING);
 			l.join(outers[i]);
 			l.join(inners[next]);
+			links.add(l);
+
+			l = new Link(obliqueLength, BLOB_SKIN_STIFFNESS, BLOB_DAMPING);
+			l.join(outers[next]);
+			l.join(inners[i]);
+			links.add(l);
+
+			l = new Link(newObliqueLength, BLOB_SKIN_STIFFNESS, BLOB_DAMPING);
+			l.join(news[i]);
+			l.join(inners[next]);
+			links.add(l);
+
+			l = new Link(newObliqueLength, BLOB_SKIN_STIFFNESS, BLOB_DAMPING);
+			l.join(news[next]);
+			l.join(inners[i]);
 			links.add(l);
 		}
 	}
@@ -164,29 +211,39 @@ public class Board extends JPanel implements ActionListener {
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
+		for (int i = 0; i < STEP_COUNT; i++) {
 
-		for (Link l : links) {
-			l.update();
-		}
+			// Links
+			for (Link l : links) {
+				l.update();
+			}
 
-		if (centerMass != null) {
-			if (keydown[0])
-				centerMass.addForce(-30, 0);
-			if (keydown[1])
-				centerMass.addForce(30, 0);
-			if (keydown[2])
-				centerMass.addForce(0, -30);
-			if (keydown[3])
-				centerMass.addForce(0, 30);
-		}
+			// GRAVITY
+			for (Mass m : masses) {
+				m.addForce(0, GRAVITY * m.mass());
+			}
 
-		for (Mass m : masses) {
-			m.update(TIMESTEP);
-		}
+			if (centerMass != null) {
+				if (keydown[0])
+					centerMass.addForce(-THRUSTER_FORCE, 0);
+				if (keydown[1])
+					centerMass.addForce(THRUSTER_FORCE, 0);
+				if (keydown[2])
+					centerMass.addForce(0, -THRUSTER_FORCE);
+				if (keydown[3])
+					centerMass.addForce(0, THRUSTER_FORCE);
+			}
 
-		for (Mass m : masses) {
-			if (m.x() < 0 || m.x() > getWidth() || m.y() < 0 || m.y() > getHeight())
-				m.revert();
+			for (Mass m : masses) {
+				m.update(TIMESTEP);
+			}
+
+			for (Mass m : masses) {
+				if (m.x() < 0 || m.x() > getWidth())
+					m.revertHorizontal();
+ 				if (m.y() < 0 || m.y() > getHeight())
+					m.revertVertical();
+			}
 		}
 
 		repaint();
@@ -212,6 +269,17 @@ public class Board extends JPanel implements ActionListener {
 				case KeyEvent.VK_ESCAPE:
 					System.exit(0);
 					break;
+				case KeyEvent.VK_F1:
+					initWorld();
+					break;
+				case KeyEvent.VK_SPACE:
+					if (centerMass != null) {
+						for (Link l : links) {
+							if (l.a() == centerMass || l.b() == centerMass)
+								l.setContracted(true);
+						}
+					}
+					break;
 			}
 		}
 
@@ -229,6 +297,14 @@ public class Board extends JPanel implements ActionListener {
 					break;
 				case KeyEvent.VK_DOWN:
 					keydown[3] = false;
+					break;
+				case KeyEvent.VK_SPACE:
+					if (centerMass != null) {
+						for (Link l : links) {
+							if (l.a() == centerMass || l.b() == centerMass)
+								l.setContracted(false);
+						}
+					}
 					break;
 			}
 		}
