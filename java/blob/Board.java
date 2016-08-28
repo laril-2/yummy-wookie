@@ -223,6 +223,7 @@ public class Board extends JPanel implements ActionListener {
 				m.addForce(0, GRAVITY * m.mass());
 			}
 
+			// PLAYER INPUT
 			if (centerMass != null) {
 				if (keydown[0])
 					centerMass.addForce(-THRUSTER_FORCE, 0);
@@ -234,15 +235,21 @@ public class Board extends JPanel implements ActionListener {
 					centerMass.addForce(0, THRUSTER_FORCE);
 			}
 
+			// UPDATE
 			for (Mass m : masses) {
 				m.update(TIMESTEP);
 			}
 
+			// COLLISIONS
 			for (Mass m : masses) {
-				if (m.x() < 0 || m.x() > getWidth())
-					m.revertHorizontal();
- 				if (m.y() < 0 || m.y() > getHeight())
-					m.revertVertical();
+				if (m.y() < 0)
+					m.reflect(0, 1.0);
+				else if (m.y() > getHeight())
+					m.reflect(0, -1.0);
+				if (m.x() < 0)
+					m.reflect(1.0, 0);
+				else if (m.x() > getWidth())
+					m.reflect(-1.0, 0);
 			}
 		}
 

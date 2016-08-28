@@ -55,22 +55,17 @@ public class Mass {
 		fY = 0;
 	}
 
-	public void revert() {
-		x = lastX;
-		y = lastY;
-	}
+	// expects input vector to be normalized !!!
+	public void reflect(double nx, double ny) {
+		double dx = x - lastX;
+		double dy = y - lastY;
 
-	public void revertHorizontal() {
-		x = lastX;
+		double dot = dx * nx + dy * ny;
 
-		double dy = (y - lastY) * FRICTION;
-		y = lastY + dy;
-	}
+		double rx = dx - 2 * dot * nx;
+		double ry = dy - 2 * dot * ny;
 
-	public void revertVertical() {
-		y = lastY;
-
-		double dx = (x - lastX) * FRICTION;
-		x = lastX + dx;
+		x = lastX + rx;
+		y = lastY + ry;
 	}
 }
