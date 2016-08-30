@@ -1,5 +1,7 @@
 package model;
 
+import app.Board;
+
 public class Mass {
 
 	private static final double FRICTION = 0.95;
@@ -28,6 +30,14 @@ public class Mass {
 		return y;
 	}
 
+	public double lastX() {
+		return lastX;
+	}
+
+	public double lastY() {
+		return lastY;
+	}
+
 	public double radius() {
 		return radius;
 	}
@@ -41,20 +51,33 @@ public class Mass {
 		fY += y;
 	}
 
-	public void update(double dt) {
+	public void update(double dt, Board board) {
 		double tempX = x;
 		double tempY = y;
 
 		x += (x - lastX) + (fX / mass) * dt * dt;
 		y += (y - lastY) + (fY / mass) * dt * dt;
 
+		fX = 0;
+		fY = 0;
+
 		lastX = tempX;
 		lastY = tempY;
 
-		fX = 0;
-		fY = 0;
+		board.collide(this);
 	}
 
+	public void reflect(double nx, double ny) {
+		addForce(nx * mass * 20, ny * mass * 20);
+
+		double dx = x - lastX;
+		double dy = y - lastY;
+
+		x = lastX + 0.95 * dx;
+		y = lastY + 0.95 * dy;
+	}
+
+	/*
 	// expects input vector to be normalized !!!
 	public void reflect(double nx, double ny) {
 		double dx = x - lastX;
@@ -68,4 +91,5 @@ public class Mass {
 		x = lastX + rx;
 		y = lastY + ry;
 	}
+	*/
 }

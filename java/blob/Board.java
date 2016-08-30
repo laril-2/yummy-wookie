@@ -14,6 +14,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
+import java.awt.geom.Rectangle2D;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 import java.io.IOException;
@@ -27,6 +28,7 @@ public class Board extends JPanel implements ActionListener {
 	private final int DELAY = 20;
 	private final int STEP_COUNT = 5; // 5
 	private final double TIMESTEP = 0.05; // 0.05
+	private final double CELL_SIZE = 20;
 
 	private final int BLOB_SEGMENT_COUNT = 20; // 20
 	private final double BLOB_RADIUS = 120.0; // 120.0
@@ -43,11 +45,16 @@ public class Board extends JPanel implements ActionListener {
 	private Timer timer;
 
 	private boolean[] keydown = new boolean[4];
+	private boolean[] grid;
+	private int gridWidth;
 
 	private ArrayList<Mass> masses; 
 	private ArrayList<Link> links; 
 
 	private Mass centerMass = null;
+
+	private double markerX = 0;	// TODO remove
+	private double markerY = 0;	// TODO remove
 
 	public Board() {
 		initBoard();
@@ -70,7 +77,13 @@ public class Board extends JPanel implements ActionListener {
 		links = new ArrayList<Link>();
 		centerMass = null;
 
-		addBlob(500, 598);
+		grid = new boolean[2400];
+		for (int i = 0; i < grid.length; i++) {
+			grid[i] = i > 1600;
+		}
+		gridWidth = 60;
+
+		addBlob(500, 300);
 	}
 
 	private void addBlob(double cx, double cy) {
@@ -182,6 +195,8 @@ public class Board extends JPanel implements ActionListener {
 		g2d.setPaint(Color.GREEN);
 		g2d.setStroke(new BasicStroke(1.0f));
 
+		g2d.draw(new Ellipse2D.Double(markerX - 5.0, markerY - 5.0, 10.0, 10.0));
+
 		for (Link l : links) {
 			if (!l.isComplete())
 				continue;
@@ -195,6 +210,17 @@ public class Board extends JPanel implements ActionListener {
 		for (Mass m : masses) {
 			double r = m.radius();
 			g2d.draw(new Ellipse2D.Double(m.x() - r, m.y() - r, 2 * r, 2 * r));
+		}
+
+		g2d.setPaint(Color.WHITE);
+		g2d.setStroke(new BasicStroke(1.0f));
+
+		for (int i = 0; i < grid.length; i++) {
+			if (!grid[i])
+				continue;
+			double x = (i % gridWidth) * CELL_SIZE;
+			double y = (i / gridWidth) * CELL_SIZE;
+			g2d.draw(new Rectangle2D.Double(x, y, CELL_SIZE, CELL_SIZE));
 		}
 
 		/*
@@ -237,23 +263,55 @@ public class Board extends JPanel implements ActionListener {
 
 			// UPDATE
 			for (Mass m : masses) {
-				m.update(TIMESTEP);
-			}
-
-			// COLLISIONS
-			for (Mass m : masses) {
-				if (m.y() < 0)
-					m.reflect(0, 1.0);
-				else if (m.y() > getHeight())
-					m.reflect(0, -1.0);
-				if (m.x() < 0)
-					m.reflect(1.0, 0);
-				else if (m.x() > getWidth())
-					m.reflect(-1.0, 0);
+				m.update(TIMESTEP, this);
 			}
 		}
 
 		repaint();
+	}
+
+	public boolean collide(Mass m) {
+		int x = (int) Math.floor(m.x() / CELL_SIZE);
+		int y = (int) Math.floor(m.y() / CELL_SIZE);
+		int cell = y * gridWidth + x;
+
+		// OUTSIDE GRID OR EMPTY CELL?
+		if (x < 0 || x >= gridWidth || cell < 0 || cell >= grid.length || !grid[cell])
+			return false;
+
+		double cx = 0;
+		double cy = 0;
+		double half = 0.5 * CELL_SIZE;
+
+		int n = 0;
+		for (int ix = x - 5; ix <= x + 5; ix++) {
+			for (int iy = y - 5; iy <= y + 5; iy++) {
+				cell = iy * gridWidth + ix;
+				if (cell >= 0 && cell < grid.length && grid[cell]) {
+					cx += ix * CELL_SIZE + half;
+					cy += iy * CELL_SIZE + half;
+					n++;
+				}
+			}
+		}
+		cx /= n;
+		cy /= n;
+
+		markerX = cx;	// TODO remove
+		markerY = cy;	// TODO remove
+
+		double nx = m.lastX() - cx;
+		double ny = m.lastY() - cy;
+		if (Math.abs(nx) < 0.00001 && Math.abs(ny) < 0.00001) {
+			return false;
+		}
+		double length = Math.sqrt(nx * nx + ny * ny);
+
+		nx /= length;
+		ny /= length;
+
+		m.reflect(nx, ny);
+		return true;
 	}
 
 	private class TAdapter extends KeyAdapter {
